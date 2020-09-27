@@ -17,6 +17,14 @@ param location string = resourceGroup().location
 // Resource location code
 param locationCode string = 'krc'
 
+// Service Principal
+param servicePrincipalClientId string {
+    secure: true
+}
+param servicePrincipalClientSecret string {
+    secure: true
+}
+
 // Cosmos DB
 param cosmosDbDefaultConsistencyLevel string = 'Session'
 param cosmosDbPrimaryRegion string = 'Korea Central'
@@ -27,6 +35,7 @@ param cosmosDbPartitionKeyPath string
 
 // Storage CosmosAccount
 param storageAccountSku string = 'Standard_LRS'
+param storageContainerLetsEncryptChallenge string = 'letsencrypt-challenge'
 
 // Function App
 param functionAppWorkerRuntime string = 'dotnet'
@@ -39,6 +48,15 @@ param functionAppEnvironment string {
     default: 'Development'
 }
 param functionAppTimezone string = 'Korea Standard Time'
+param functionAppCustomDomain string
+
+// dvrl.kr
+param dvrlDefaultRedirectUrl string
+param dvrlFilesToBeIgnored string = 'favicon.ico'
+param dvrlGoogleAnalyticsCode string {
+    secure: true
+}
+param dvrlUrlShortenerLength int = 10
 
 var metadata = {
     longName: '{0}-${name}-${env}-${locationCode}'
@@ -128,6 +146,7 @@ var storage = {
     name: format(metadata.shortName, 'st')
     location: location
     sku: storageAccountSku
+    letsEncryptChallenge: storageContainerLetsEncryptChallenge
 }
 
 resource st 'Microsoft.Storage/storageAccounts@2019-06-01' = {
@@ -142,6 +161,14 @@ resource st 'Microsoft.Storage/storageAccounts@2019-06-01' = {
     }
 }
 
+resource stBlob 'Microsoft.Storage/storageAccounts/blobServices@2019-06-01' = {
+    name: '${st.name}/default'
+}
+
+resource stBlobLetsEncrypt 'Microsoft.Storage/storageAccounts/blobServices/containers@2019-06-01' = {
+    name: '${stBlob.name}/${storage.letsEncryptChallenge}'
+}
+
 var appInsights = {
     name: format(metadata.longName, 'appins')
     location: location
@@ -152,7 +179,6 @@ resource appins 'Microsoft.Insights/components@2020-02-02-preview' = {
     location: appInsights.location
     kind: 'web'
     properties: {
-        // ApplicationId: appInsights.name
         Application_Type: 'web'
         Request_Source: 'IbizaWebAppExtensionCreate'
     }
@@ -182,9 +208,22 @@ var functionApp = {
     environment: functionAppEnvironment
     runtime: functionAppWorkerRuntime
     timezone: functionAppTimezone
+    hostname: functionAppCustomDomain
 }
 
-resource fncapp 'Microsoft.Web/sites@2019-08-01' = {
+var servicePrincipal = {
+    clientId: servicePrincipalClientId
+    clientSecret: servicePrincipalClientSecret
+}
+
+var dvrlkr = {
+    defaultRedirectUrl: dvrlDefaultRedirectUrl
+    filesToBeIgnored: dvrlFilesToBeIgnored
+    googleAnalyticsCode: dvrlGoogleAnalyticsCode
+    urlShortenerLength: dvrlUrlShortenerLength
+}
+
+resource fncapp 'Microsoft.Web/sites@2020-06-01' = {
     name: functionApp.name
     location: functionApp.location
     kind: 'functionapp'
@@ -242,7 +281,98 @@ resource fncapp 'Microsoft.Web/sites@2019-08-01' = {
                     name: 'CosmosDBConnection'
                     value: 'AccountEndpoint=https://${cosdba.name}.documents.azure.com:443/;AccountKey=${listKeys(cosdba.id, '2020-06-01-preview').primaryMasterKey};'
                 }
+                // Let's Encrypt related settings
+                {
+                    name: 'AzureWebJobsDashboard'
+                    value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(st.id, '2019-06-01').keys[0].value}'
+                }
+                {
+                    name: 'AzureWebJobsStorageLetsEncryptChallengeUrl'
+                    value: 'https://${st.name}.blob.${environment().suffixes.storage}/${storage.letsEncryptChallenge}'
+                }
+                {
+                    name: 'letsencrypt:Tenant'
+                    value: '${subscription().tenantId}'
+                }
+                {
+                    name: 'letsencrypt:SubscriptionId'
+                    value: '${subscription().subscriptionId}'
+                }
+                {
+                    name: 'letsencrypt:ClientId'
+                    value: servicePrincipal.clientId
+                }
+                {
+                    name: 'letsencrypt:ClientSecret'
+                    value: servicePrincipal.clientSecret
+                }
+                {
+                    name: 'letsencrypt:ResourceGroupName'
+                    value: '${resourceGroup().name}'
+                }
+                {
+                    name: 'letsencrypt:ServicePlanResourceGroupName'
+                    value: '${resourceGroup().name}'
+                }
+                {
+                    name: 'letsencrypt:UseIPBasedSSL'
+                    value: false
+                }
+                {
+                    name: 'letsencrypt:AuthorizationChallengeBlobStorageAccount'
+                    value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(st.id, '2019-06-01').keys[0].value}'
+                }
+                {
+                    name: 'letsencrypt:AuthorizationChallengeBlobStorageContainer'
+                    value: storage.letsEncryptChallenge
+                }
+                // dvrl.kr specific settings
+                {
+                    name: 'DefaultRedirectUrl'
+                    value: dvrlkr.defaultRedirectUrl
+                }
+                {
+                    name: 'FilesToBeIgnored'
+                    value: dvrlkr.filesToBeIgnored
+                }
+                {
+                    name: 'GoogleAnalyticsCode'
+                    value: dvrlkr.googleAnalyticsCode
+                }
+                {
+                    name: 'ShortenUrl__Hostname'
+                    value: functionApp.hostname
+                }
+                {
+                    name: 'ShortenUrl__Length'
+                    value: dvrlkr.urlShortenerLength
+                }
+                {
+                    name: 'CosmosDb__DatabaseName'
+                    value: cosmosDb.dbName
+                }
+                {
+                    name: 'CosmosDb__ContainerName'
+                    value: cosmosDb.containerName
+                }
+                {
+                    name: 'CosmosDb__PartitionKeyPath'
+                    value: cosmosDb.partitionKeyPath
+                }
             ]
         }
+    }
+}
+
+resource fncappHostname 'Microsoft.Web/sites/hostNameBindings@2020-06-01' = {
+    name: '${fncapp.name}/${functionApp.hostname}'
+    location: functionApp.location
+}
+
+resource fncappLetsencrypt 'Microsoft.Web/sites/siteextensions@2020-06-01' = {
+    name: '${fncapp.name}/letsencrypt'
+    location: functionApp.location
+    properties: {
+        key1: 'value1'
     }
 }
