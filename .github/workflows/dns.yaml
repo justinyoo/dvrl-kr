@@ -3,9 +3,9 @@ name: Update DNS & SSL Certificate
 on:
   schedule:
   - cron: '0/30 * * * *'
-
-env:
-  FUNCTIONAPP_PATH: 'src/DevRelKr.UrlShortener.FunctionApp'
+  # push:
+  #   branches:
+  #   - feature/*
 
 jobs:
   update_dns_and_ssl_certificate:
@@ -14,14 +14,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout the repo
+      uses: actions/checkout@v2
+
+    - name: Install Azure PowerShell
+      shell: pwsh
+      run: |
+        Install-Module -Name Az -RequiredVersion 4.7.0 -AllowClobber -Scope CurrentUser -Force
+
     - name: Update A Record
+      id: arecord
       shell: pwsh
       env:
         AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_PROD }}
       run: |
-        ./scripts/Update-AzDnsARecord.ps1 -AppResourceGroupName ${{ secrets.RESOURCE_GROUP_NAME_PROD }} -AppName ${{ secrets.RESOURCE_FUNCTIONAPP_NAME_PROD }} -ZoneResourceGroupName ${{ secrets.RESOURCE_GROUP_NAME_ZONE }} -ZoneName ${{ secrets.RESOURCE_NAME_ZONE }}
+        $updated = scripts/Update-AzDnsARecord.ps1 -AppResourceGroupName ${{ secrets.RESOURCE_GROUP_NAME_PROD }} -AppName ${{ secrets.RESOURCE_FUNCTIONAPP_NAME_PROD }} -ZoneResourceGroupName ${{ secrets.RESOURCE_GROUP_NAME_ZONE }} -ZoneName ${{ secrets.RESOURCE_NAME_ZONE }}
+        Write-Output "::set-output name=updated::$updated"
 
     - name: Update SSL Certificate
+      if: steps.arecord.outputs.updated == 'true'
       shell: pwsh
       run: |
-        ./scripts/Update-AzSslCertificate.ps1 -ApiEndpoint ${{ secrets.SSL_RENEW_ENDPOINT }} -DnsNames ${{ secrets.SSL_DNS_NAMES }}
+        scripts/Update-AzSslCertificate.ps1 -ApiEndpoint ${{ secrets.SSL_RENEW_ENDPOINT }} -DnsNames ${{ secrets.SSL_DNS_NAMES }}
