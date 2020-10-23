@@ -28,11 +28,11 @@ runs:
   using: docker
   image: Dockerfile
   args:
-  - AppResourceGroupName
+  - -AppResourceGroupName
   - ${{ inputs.appServiceResourceGroup }}
-  - AppName
+  - -AppName
   - ${{ inputs.appName }}
-  - ZoneResourceGroupName
+  - -ZoneResourceGroupName
   - ${{ inputs.dnsZoneResourceGroup }}
-  - ZoneName
+  - -ZoneName
   - ${{ inputs.dnsZoneName }}
