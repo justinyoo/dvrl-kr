@@ -53,7 +53,7 @@ jobs:
 
     - name: Update A record
       id: arecord
-      uses: ./github/actions/dns-update
+      uses: ./.github/actions/dns-update
       env:
         AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_PROD }}
       with:
@@ -70,7 +70,7 @@ jobs:
 
     - name: Update SSL Certificate
       if: steps.arecord.outputs.updated == 'true'
-      uses: ./github/actions/ssl-update
+      uses: ./.github/actions/ssl-update
       with:
         apiEndpoint: ${{ secrets.SSL_RENEW_ENDPOINT }}
         hostNames: ${{ secrets.SSL_DNS_NAMES }}
