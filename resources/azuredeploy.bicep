@@ -197,15 +197,13 @@ var servicePlan = {
     location: location
 }
 
-resource csplan 'Microsoft.Web/serverfarms@2019-08-01' = {
+resource csplan 'Microsoft.Web/serverfarms@2020-06-01' = {
     name: servicePlan.name
     location: servicePlan.location
+    kind: 'functionApp'
     sku: {
         name: 'Y1'
         tier: 'Dynamic'
-    }
-    properties: {
-        reserved: true
     }
 }
 

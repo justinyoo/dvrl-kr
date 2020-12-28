@@ -262,15 +262,13 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2019-08-01",
+      "apiVersion": "2020-06-01",
       "name": "[variables('servicePlan').name]",
       "location": "[variables('servicePlan').location]",
+      "kind": "functionApp",
       "sku": {
         "name": "Y1",
         "tier": "Dynamic"
-      },
-      "properties": {
-        "reserved": true
       }
     },
     {
