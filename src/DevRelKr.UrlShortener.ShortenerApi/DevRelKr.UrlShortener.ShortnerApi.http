@@ -1,0 +1,6 @@
+@DevRelKr.UrlShortener.ShortnerApi_HostAddress = http://localhost:5122
+
+GET {{DevRelKr.UrlShortener.ShortnerApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
