@@ -354,3 +354,8 @@ assets/10000w/
 *.local.json
 *.ai
 *.pptx
+
+appsettings.*.json
+!appsettings.*.sample.json
+
+.azure
