@@ -1,0 +1,36 @@
+openapi: 3.0.1
+info:
+  title: 'URL Rewriting API'
+  description: |
+    This API rewrites the incoming shortened URL to the real one
+  version: '1.0'
+servers:
+  - url: https://localhost:5051
+    x-internal: true
+paths:
+  '/{*path}':
+    get:
+      summary: 'Rewrites the incoming URL'
+      description: |
+        Rewrites the incoming URL by converting the entire path to a query parameter
+      operationId: 'RewriteUrl'
+      parameters:
+        - name: '*path'
+          in: path
+          description: 'The shortened URL path'
+          required: true
+          schema:
+            type: 'string'
+            maxLength: 4096
+            pattern: '[\w\-\/]*'
+      responses:
+        default:
+          description: 'The default response'
+# components:
+#   securitySchemes:
+#     apiKey:
+#       type: apiKey
+#       name: x-api-key
+#       in: header
+# security:
+#   - apiKey: [ ]

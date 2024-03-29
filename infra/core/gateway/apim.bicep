@@ -58,6 +58,10 @@ resource apimService 'Microsoft.ApiManagement/service@2023-05-01-preview' = {
   }
 }
 
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = if (!empty(applicationInsightsName)) {
+  name: applicationInsightsName
+}
+
 resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-05-01-preview' = if (!empty(applicationInsightsName)) {
   name: 'app-insights-logger'
   parent: apimService
@@ -72,8 +76,72 @@ resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-05-01-preview'
   }
 }
 
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = if (!empty(applicationInsightsName)) {
-  name: applicationInsightsName
+resource apimNamedValue 'Microsoft.ApiManagement/service/namedValues@2023-05-01-preview' = {
+  name: 'LANDING_APP_URL'
+  parent: apimService
+  properties: {
+    displayName: 'LANDING_APP_URL'
+    value: 'https://localhost:5051'
+    secret: false
+  }
+}
+
+resource apimProduct 'Microsoft.ApiManagement/service/products@2023-05-01-preview' = {
+  name: 'default'
+  parent: apimService
+  properties: {
+    displayName: 'Default Product'
+    description: 'This is the default product created by the template, which includes all APIs.'
+    state: 'published'
+    subscriptionRequired: true
+  }
+}
+
+resource apimsubScription 'Microsoft.ApiManagement/service/subscriptions@2023-05-01-preview' = {
+  name: 'default'
+  parent: apimService
+  properties: {
+    displayName: 'Default Subscription'
+    scope: apimProduct.id
+  }
+}
+
+var openapi = loadTextContent('openapi-rewriter.yaml')
+
+resource apimApi 'Microsoft.ApiManagement/service/apis@2023-05-01-preview' = {
+  name: 'url-proxy-api'
+  parent: apimService
+  properties: {
+    type: 'http'
+    displayName: 'URL Proxy API'
+    description: 'API to URL shortening service'
+    serviceUrl: 'http://localhost'
+    path: ''
+    subscriptionRequired: true
+    format: 'openapi'
+    value: openapi
+  }
+}
+
+resource apimProductApi 'Microsoft.ApiManagement/service/products/apis@2023-05-01-preview' = {
+  name: apimApi.name
+  parent: apimProduct
+}
+
+resource apimApiOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' existing = {
+  name: 'RewriteUrl'
+  parent: apimApi
+}
+
+var xml = loadTextContent('policy-api-rewriter-operation-rewrite-url.xml')
+
+resource apimApiOperationPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2023-05-01-preview' = {
+  name: 'policy'
+  parent: apimApiOperation
+  properties: {
+    format: 'xml'
+    value: xml
+  }
 }
 
 output apimServiceName string = apimService.name
