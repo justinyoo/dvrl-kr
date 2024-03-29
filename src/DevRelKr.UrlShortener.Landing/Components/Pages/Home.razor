@@ -1,18 +1,19 @@
 @page "/"
-@using Microsoft.AspNetCore.WebUtilities
+@* @using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager NavigationManager
+ *@
+<PageTitle>dvrl.kr</PageTitle>
 
-<PageTitle>Home</PageTitle>
+@* @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-
-@code {
     protected override async Task OnInitializedAsync()
     {
+        var headers = HttpContext?.Request.Headers;
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var queries = QueryHelpers.ParseQuery(uri.Query);
         NavigationManager.NavigateTo($"https://{queries["path"]}", forceLoad: false, replace: true);
     }
 }
+ *@
