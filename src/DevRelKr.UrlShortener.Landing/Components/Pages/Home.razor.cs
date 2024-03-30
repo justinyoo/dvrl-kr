@@ -20,9 +20,12 @@ public partial class Home : ComponentBase
         // Store the request header
 
         // Search path
-        // If the path exists, redirect to the path
+        var path = queries.TryGetValue("path", out var value) ? value.ToString() : "/";
         // If the path does not exist, redirect to the dashboard page
+        var url = "https://app.dvrl.kr";
 
-        this.NavigationManager?.NavigateTo($"https://{queries["path"]}", forceLoad: false, replace: true);
+        this.NavigationManager?.NavigateTo(url, forceLoad: false, replace: true);
+
+        await Task.CompletedTask;
     }
 }
