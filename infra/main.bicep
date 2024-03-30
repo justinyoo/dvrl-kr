@@ -79,6 +79,16 @@ module apim './core/gateway/apim.bicep' = {
   }
 }
 
+module st './core/storage/storage-account.bicep' = {
+  name: 'module_storage'
+  scope: rg
+  params: {
+    name: '${abbrs.storageStorageAccounts}${environmentName}'
+    location: location
+    tags: tags
+  }
+}
+
 // Add outputs from the deployment here, if needed.
 //
 // This allows the outputs to be referenced by other bicep deployments in the deployment pipeline,

@@ -3,7 +3,7 @@ using DevRelKr.UrlShortener.Landing.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddAzureTableService("table");
+// builder.AddAzureTableService("table");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
