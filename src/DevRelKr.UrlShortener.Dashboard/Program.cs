@@ -3,6 +3,7 @@ using DevRelKr.UrlShortener.Dashboard.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddAzureQueueService("queue");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
